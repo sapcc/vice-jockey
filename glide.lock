@@ -1,0 +1,20 @@
+hash: f8cba36db829892dc906104ee8e2a29ee17d8d5c9d8780e3032587d45c68a39a
+updated: 2017-05-02T11:36:42.692265529+02:00
+imports:
+- name: github.com/golang/glog
+  version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
+- name: github.com/google/go-querystring
+  version: 53e6ce116135b80d037921a7fdd5138cf32d7a8a
+  subpackages:
+  - query
+- name: github.com/inconshreveable/mousetrap
+  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
+- name: github.com/sapcc/go-vice
+  version: 1602f853609243229f15c33f374136c42749eb51
+- name: github.com/spf13/cobra
+  version: 8f0203be891287870100e4af46262cdf4a4261d1
+  subpackages:
+  - cobra
+- name: github.com/spf13/pflag
+  version: c990990ab4981d84da820b7b00c85139ca150b5f
+testImports: []

@@ -1,0 +1,4 @@
+package: github.com/sapcc/vice-jockey
+import:
+- package: github.com/spf13/cobra/cobra
+- package: github.com/sapcc/go-vice
