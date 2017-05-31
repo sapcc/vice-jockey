@@ -276,7 +276,7 @@ func Renew(configFile string) error {
 		pool.AppendCertsFromPEM([]byte(SYMANTEC_INTERMEDIATE))
 
 		opts := x509.VerifyOptions{
-			CurrentTime:   time.Now().AddDate(0, 1, 0),
+			CurrentTime:   time.Now().AddDate(0, 3, 0),
 			Intermediates: pool,
 		}
 
