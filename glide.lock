@@ -1,5 +1,5 @@
-hash: f8cba36db829892dc906104ee8e2a29ee17d8d5c9d8780e3032587d45c68a39a
-updated: 2017-05-02T11:36:42.692265529+02:00
+hash: 919553a2b5f14b48451254cd1f2fcc06cd6862f63a6fe544fa117db49f6d46ab
+updated: 2017-06-01T11:38:13.597536839+02:00
 imports:
 - name: github.com/golang/glog
   version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
@@ -12,9 +12,11 @@ imports:
 - name: github.com/sapcc/go-vice
   version: 1602f853609243229f15c33f374136c42749eb51
 - name: github.com/spf13/cobra
-  version: 8f0203be891287870100e4af46262cdf4a4261d1
+  version: 8d4ce3549a0bf0e3569df3aae7423b7743cd05a9
   subpackages:
   - cobra
 - name: github.com/spf13/pflag
-  version: c990990ab4981d84da820b7b00c85139ca150b5f
+  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
+- name: gopkg.in/yaml.v2
+  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
 testImports: []
