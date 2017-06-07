@@ -226,6 +226,7 @@ func Pickup(configFile string) error {
 		err = writeCert(basename, pickup.Certificate)
 		if err != nil {
 			glog.Errorf("Couldn't write cert: %v", err)
+			continue
 		}
 
 		glog.Infof("Picked up certificate for %v", cr.CommonName)
@@ -238,6 +239,7 @@ func Pickup(configFile string) error {
 
 		if err != nil {
 			glog.Errorf("Couldn't append intermediate: %v", err)
+			continue
 		}
 	}
 
@@ -245,6 +247,11 @@ func Pickup(configFile string) error {
 }
 
 func Renew(configFile string) error {
+	viceClient, err := NewViceClient(CertFile, KeyFile)
+	if err != nil {
+		return fmt.Errorf("Could create vice-client: %v", err)
+	}
+
 	config, err := loadConfig(configFile)
 	if err != nil {
 		return fmt.Errorf("Could read config-file: %v", err)
@@ -270,8 +277,6 @@ func Renew(configFile string) error {
 			continue
 		}
 
-		glog.V(5).Infof("Certificate %v is valid until %v", cr.CommonName, cert.NotAfter)
-
 		pool := x509.NewCertPool()
 		pool.AppendCertsFromPEM([]byte(SYMANTEC_INTERMEDIATE))
 
@@ -281,14 +286,83 @@ func Renew(configFile string) error {
 		}
 
 		_, err = cert.Verify(opts)
-		if err == nil {
-			glog.V(3).Infof("Certificate is valid. %v: %v", cr.CommonName, err)
+		if err != nil {
+			glog.Infof("%v is expiring soon: %v", cr.CommonName, cert.NotAfter)
+			renew(viceClient, config, cr)
 		} else {
-			glog.Info("Certificate is expiring soon: %v: %v", cr.CommonName, err)
+			glog.V(5).Infof("%v is valid until: %v", cr.CommonName, cert.NotAfter)
 		}
 	}
 
 	return nil
+}
+
+func renew(viceClient *vice.Client, config *Config, cr Certificate) {
+	glog.Infof("Renewing certificate for %v.", cr.CommonName)
+
+	basename := filepath.Join(Workdir, cr.CommonName)
+
+	key, _, err := readKey(basename)
+	if err != nil {
+		glog.Fatalf("Key failed: %v", err)
+	}
+
+	csr, err := newRawCSR(cr.CommonName, config.Defaults.Email, cr.SANS, key)
+	if err != nil {
+		glog.Fatalf("Generating CSR failed: %v", err)
+	}
+
+	err = writeCSR(basename, csr)
+	if err != nil {
+		glog.Fatalf("Writing CSR failed: %v", err)
+	}
+
+	renewRequest := &vice.RenewRequest{
+		FirstName:          config.Defaults.FirstName,
+		LastName:           config.Defaults.LastName,
+		Email:              config.Defaults.Email,
+		CSR:                string(csr),
+		SubjectAltNames:    cr.SANS,
+		OriginalChallenge:  config.Defaults.Challenge,
+		Challenge:          config.Defaults.Challenge,
+		CertProductType:    vice.CertProductType.Server,
+		ServerType:         vice.ServerType.OpenSSL,
+		ValidityPeriod:     vice.ValidityPeriod.OneYear,
+		SignatureAlgorithm: vice.SignatureAlgorithm.SHA256WithRSAEncryption,
+	}
+
+	tid, err := readTID(basename)
+	if tid != "" {
+		renewRequest.OriginalTransactionID = tid
+	} else {
+		original, err := readCert(basename)
+		if err != nil {
+			glog.Errorf("Couldn't read TID or original certificate for %v. Skipping...", cr.CommonName)
+			return
+		} else {
+			renewRequest.OriginalCertificate = original
+		}
+	}
+
+	ctx := context.TODO()
+	renewal, err := viceClient.Certificates.Renew(ctx, renewRequest)
+
+	if err != nil {
+		glog.Errorf("Couldn't renew certificate for transaction %v: %v", tid, err)
+		return
+	}
+
+	err = writeCert(basename, renewal.Certificate)
+	if err != nil {
+		glog.Errorf("Couldn't write cert: %v", err)
+		return
+	}
+
+	err = appendIntermediateCert(basename, SYMANTEC_INTERMEDIATE)
+
+	if err != nil {
+		glog.Errorf("Couldn't append intermediate: %v", err)
+	}
 }
 
 func loadConfig(configFile string) (*Config, error) {
@@ -338,18 +412,21 @@ func readCert(basename string) (string, error) {
 	return string(pem), nil
 }
 
-func readKey(basename string) (key *rsa.PrivateKey, pem []byte, err error) {
+func readKey(basename string) (key *rsa.PrivateKey, raw []byte, err error) {
 	file := fmt.Sprintf("%s-key.pem", basename)
 
 	if _, err = os.Stat(file); !os.IsNotExist(err) {
-		pem, err = ioutil.ReadFile(file)
-		if err == nil {
-			key, err = x509.ParsePKCS1PrivateKey(pem)
+		io, err := ioutil.ReadFile(file)
+		if err != nil {
+			return nil, nil, err
 		}
+
+		block, _ := pem.Decode(io)
+		key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
 	} else {
-		key, pem, err = newRSAKey()
+		key, raw, err = newRSAKey()
 		if err == nil {
-			err = writeKey(basename, pem)
+			err = writeKey(basename, raw)
 		}
 	}
 
