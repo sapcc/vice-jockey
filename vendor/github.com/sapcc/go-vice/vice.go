@@ -54,6 +54,7 @@ type CertificatesService interface {
 	Enroll(context.Context, *EnrollRequest) (*Enrollment, error)
 	Pickup(context.Context, *PickupRequest) (*Pickup, error)
 	Approve(context.Context, *ApprovalRequest) (*Approval, error)
+	Renew(context.Context, *RenewRequest) (*Renewal, error)
 }
 
 type CertificatesServiceOp struct {
