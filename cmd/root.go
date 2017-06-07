@@ -16,6 +16,9 @@ var RootCmd = &cobra.Command{
 }
 
 func InitFlags() {
+	flag.Parse()
+	flag.Set("logtostderr", "true")
+
 	RootCmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
 	RootCmd.PersistentFlags().StringVar(&jockey.CertFile, "cert", "", "Path to the PEM encoded certificate used for authentication")
 	RootCmd.PersistentFlags().StringVar(&jockey.KeyFile, "key", "", "Path to the PEM encoded private key used for authentication")
