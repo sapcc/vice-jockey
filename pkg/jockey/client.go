@@ -12,12 +12,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
-
-	yaml "gopkg.in/yaml.v2"
 
 	"github.com/golang/glog"
 	vice "github.com/sapcc/go-vice"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const DIGICERT_INTERMEDIATE = `
@@ -74,7 +74,7 @@ func Enroll(configFile string) error {
 	glog.Info("============================================================================")
 
 	for _, cr := range config.Certificates {
-		basename := filepath.Join(Workdir, cr.CommonName)
+		basename := baseNameForCN(cr.CommonName)
 
 		tid, err := readTID(basename)
 		if tid != "" {
@@ -151,7 +151,7 @@ func Approve(configFile string) error {
 	glog.Info("============================================================================")
 
 	for _, cr := range config.Certificates {
-		basename := filepath.Join(Workdir, cr.CommonName)
+		basename := baseNameForCN(cr.CommonName)
 
 		tid, err := readTID(basename)
 		if err != nil {
@@ -179,7 +179,6 @@ func Approve(configFile string) error {
 		}
 
 		err = appendIntermediateCert(basename, DIGICERT_INTERMEDIATE)
-
 		if err != nil {
 			glog.Errorf("Couldn't append intermediate: %v", err)
 		}
@@ -204,7 +203,7 @@ func Pickup(configFile string) error {
 	glog.Info("============================================================================")
 
 	for _, cr := range config.Certificates {
-		basename := filepath.Join(Workdir, cr.CommonName)
+		basename := baseNameForCN(cr.CommonName)
 
 		tid, err := readTID(basename)
 		if err != nil {
@@ -259,9 +258,7 @@ func Renew(configFile string) error {
 	glog.Info("============================================================================")
 
 	for _, cr := range config.Certificates {
-		basename := filepath.Join(Workdir, cr.CommonName)
-
-		raw, err := readCert(basename)
+		raw, err := readCert(baseNameForCN(cr.CommonName))
 		if err != nil {
 			glog.Errorf("Couldn't read certificate for %v: %v", cr.CommonName, err)
 			continue
@@ -297,7 +294,7 @@ func Renew(configFile string) error {
 func renew(viceClient *vice.Client, config *Config, cr Certificate) {
 	glog.Infof("Renewing certificate for %v.", cr.CommonName)
 
-	basename := filepath.Join(Workdir, cr.CommonName)
+	basename := baseNameForCN(cr.CommonName)
 
 	key, _, err := readKey(basename)
 	if err != nil {
@@ -491,4 +488,11 @@ func appendIntermediateCert(basename, pem string) error {
 	}
 
 	return nil
+}
+
+func baseNameForCN(commonName string) string {
+	// Windows doesn't allow the asterisk `*` as part of a filename.
+	// Replace with `wildcard`.
+	commonName = strings.Replace(commonName, "*", "wildcard", -1)
+	return filepath.Join(Workdir, commonName)
 }
